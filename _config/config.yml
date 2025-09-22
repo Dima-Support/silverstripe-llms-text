@@ -1,0 +1,7 @@
+DimaSupport\LLMsTxt\Task\GenerateLLMsTxtTask:
+  filter:
+    ShowInSearch: 1
+  exclude:
+    ClassName: 'SilverStripe\ErrorPage\ErrorPage'
+  sort: 'Title ASC'
+  file_name: 'llms.txt'
