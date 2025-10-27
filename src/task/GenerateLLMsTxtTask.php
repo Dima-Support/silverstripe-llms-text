@@ -9,18 +9,15 @@ use SilverStripe\Dev\BuildTask;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\SiteConfig\SiteConfig;
 use SilverStripe\Versioned\Versioned;
-use SilverStripe\PolyExecution\PolyOutput;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
 
 class GenerateLLMsTxtTask extends BuildTask
 {
-    protected static string $commandName = 'generate-llms-txt';
+    private static $segment = 'generate-llms-txt';
 
-    protected string $title = 'Generate llms.txt';
-    protected static string $description = 'Genereert /public/llms.txt met alle gepubliceerde pagina-URLs.';
+    protected $title = 'Generate llms.txt';
+    protected $description = 'Genereert /public/llms.txt met alle gepubliceerde pagina-URLs.';
 
-    protected  function execute(InputInterface $input, PolyOutput $output): int
+    public function run($request)
     {
         // Live (gepubliceerde) pagina’s ophalen
         $pages = Versioned::get_by_stage(SiteTree::class, Versioned::LIVE)
@@ -60,14 +57,12 @@ class GenerateLLMsTxtTask extends BuildTask
         $filePath = rtrim($publicPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'llms.txt';
         $ok = @file_put_contents($filePath, $contents);
 
-        if (@file_put_contents($filePath, $contents) === false) {
-            $output->writeln("Kon llms.txt niet schrijven naar: {$filePath}. Controleer bestandsrechten.");
-            return Command::FAILURE;
+        if ($ok === false) {
+            echo "Kon llms.txt niet schrijven naar: {$filePath}. Controleer bestandsrechten.\n";
+            return;
         }
 
-        $output->writeln("llms.txt aangemaakt/opnieuw gegenereerd: {$filePath}");
-        $output->writeln("Aantal pagina's: " . count($lines));
-
-        return Command::SUCCESS;
+        echo "llms.txt aangemaakt/opnieuw gegenereerd: {$filePath}\n";
+        echo "Aantal pagina's: " . count($lines) . "\n";
     }
 }
