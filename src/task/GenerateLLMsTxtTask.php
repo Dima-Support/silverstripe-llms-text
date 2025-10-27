@@ -9,17 +9,22 @@ use SilverStripe\Dev\BuildTask;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\SiteConfig\SiteConfig;
 use SilverStripe\Versioned\Versioned;
+use SilverStripe\PolyExecution\PolyOutput;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
 
 class GenerateLLMsTxtTask extends BuildTask
 {
-    private static $segment = 'generate-llms-txt';
+    
+    protected static string $commandName = 'generate-llms-txt';
 
-    protected $title = 'Generate llms.txt';
-    protected $description = 'Genereert /public/llms.txt met alle gepubliceerde pagina-URLs.';
+    
+    protected string $title = 'Generate llms.txt';
+    protected static string $description = 'Genereert /public/llms.txt met alle gepubliceerde pagina-URLs.';
 
-    public function run($request)
+    
+    protected function execute(InputInterface $input, PolyOutput $output): int
     {
-        // Live (gepubliceerde) pagina’s ophalen
         $pages = Versioned::get_by_stage(SiteTree::class, Versioned::LIVE)
             ->filter('ShowInSearch', 1)
             ->exclude('ClassName', 'SilverStripe\\ErrorPage\\ErrorPage')
@@ -28,7 +33,6 @@ class GenerateLLMsTxtTask extends BuildTask
         $cfg = SiteConfig::current_site_config();
         $siteTitle = trim($cfg->Title ?: 'Website');
 
-        // NL-achtige timestamp
         $now = new DateTimeImmutable(DBDatetime::now()->Rfc2822());
         $stamp = $now->format('Y-m-d H:i:s');
 
@@ -39,30 +43,30 @@ class GenerateLLMsTxtTask extends BuildTask
             $lines[] = sprintf('- [%s](%s)', $title, $url);
         }
 
-        $header = "# {$siteTitle}\n> Automatisch gegenereerd op {$stamp}\n\n## Pagina's\n";
-        $body   = implode("\n", $lines) . "\n";
+        $header   = "# {$siteTitle}\n> Automatisch gegenereerd op {$stamp}\n\n## Pagina's\n";
+        $body     = implode("\n", $lines) . "\n";
         $contents = $header . $body;
 
-        // Cross-env: bepaal public-pad robuust
+        
         if (method_exists(Director::class, 'publicFolder')) {
-            $publicPath = Director::publicFolder();           // SS4/SS5 met /public
+            $publicPath = Director::publicFolder();
             if (!is_dir($publicPath) && is_dir(BASE_PATH . '/public')) {
                 $publicPath = BASE_PATH . '/public';
             }
         } else {
-            // Oudere setups zonder separate /public
             $publicPath = BASE_PATH;
         }
 
         $filePath = rtrim($publicPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'llms.txt';
-        $ok = @file_put_contents($filePath, $contents);
 
-        if ($ok === false) {
-            echo "Kon llms.txt niet schrijven naar: {$filePath}. Controleer bestandsrechten.\n";
-            return;
+        if (@file_put_contents($filePath, $contents) === false) {
+            $output->writeln("Kon llms.txt niet schrijven naar: {$filePath}. Controleer bestandsrechten.");
+            return Command::FAILURE;
         }
 
-        echo "llms.txt aangemaakt/opnieuw gegenereerd: {$filePath}\n";
-        echo "Aantal pagina's: " . count($lines) . "\n";
+        $output->writeln("llms.txt aangemaakt/opnieuw gegenereerd: {$filePath}");
+        $output->writeln("Aantal pagina's: " . count($lines));
+
+        return Command::SUCCESS;
     }
 }
