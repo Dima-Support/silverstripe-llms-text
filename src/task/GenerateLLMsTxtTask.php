@@ -26,7 +26,9 @@ class GenerateLLMsTxtTask extends BuildTask
     protected function execute(InputInterface $input, PolyOutput $output): int
     {
         $pages = Versioned::get_by_stage(SiteTree::class, Versioned::LIVE)
-            ->filter('ShowInSearch', 1)
+            ->filter([
+                'ShowInSearch' => 1
+            ])
             ->exclude('ClassName', 'SilverStripe\\ErrorPage\\ErrorPage')
             ->sort('Title ASC');
 
